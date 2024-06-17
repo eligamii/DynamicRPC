@@ -1,6 +1,6 @@
 # DynamicRPC
 
-Easily work dynamically with JSON RPC calls in C#
+Easily work with JSON RPC calls in C#
 
 
 
