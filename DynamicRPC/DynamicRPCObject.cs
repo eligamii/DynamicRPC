@@ -2,16 +2,42 @@
 using System.Net;
 using System.Dynamic;
 using Newtonsoft.Json.Linq;
+using System.Reflection;
 
 namespace DynamicRPC
 {
     public class DynamicRPCObject : DynamicObject
     {
         private static HttpClient? sharedClient;
-        private HttpClient client;
+        private readonly HttpClient? client;
         private int id = int.MinValue;
 
-        private string endpoint;
+        private string className = string.Empty;
+        private DynamicRPCObject? parent = null;
+
+        public string Endpoint { get; set; }
+       
+
+
+        public DynamicRPCObject(string endpoint, HttpClient? client = null)
+        {
+            if (client == null)
+                sharedClient = CreateHttpClient();
+
+            this.client = client ?? sharedClient!;
+
+            Endpoint = endpoint;
+        }
+
+        private DynamicRPCObject(string className, DynamicRPCObject parent, int lastId, string endpoint)
+        {
+            this.className = className;
+            this.parent = parent;
+            this.id = lastId;
+            Endpoint = endpoint;
+        }
+
+
         private static HttpClient CreateHttpClient()
         {
             HttpClientHandler handler = new()
@@ -26,30 +52,43 @@ namespace DynamicRPC
             return client;
         }
 
-
-        public DynamicRPCObject(string endpoint, HttpClient? client = null)
+        public override bool TryGetMember(GetMemberBinder binder, out object? result)
         {
-            if (client == null)
-                sharedClient = CreateHttpClient();
+            if (binder.Name.Equals("endpoint", StringComparison.InvariantCultureIgnoreCase))
+                result = Endpoint;
+            else
+                result = new DynamicRPCObject(binder.Name, this, id, Endpoint);
 
-            this.client = client ?? sharedClient!;
-
-            this.endpoint = endpoint;
+            return true;
+            
         }
 
+        public override bool TrySetMember(SetMemberBinder binder, object? value)
+        {
+            if (binder.Name.Equals("endpoint", StringComparison.InvariantCultureIgnoreCase))
+            {
+                Endpoint = (string)value!;
+                return true;
+            }
+            else
+            {  
+                return false;
+            }
+        }
 
-        public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result)
+        private bool Invoke(string methodName, object?[]? args, out object? result)
         {
             dynamic payload = new JObject();
             payload.jsonrpc = "2.0";
             payload.id = id++;
-            payload.method = binder.Name.Replace("__", "/").Replace('_', '.').Replace('/', '_');
-            payload.@params = JToken.FromObject(args ?? []);
+            payload.method = methodName;
+            payload.@params = JToken.FromObject(args ?? Array.Empty<object>());
 
             string payloadString = payload.ToString();
 
-            result = Task.Run(async () => {
-                var result = await client.PostAsync(endpoint, new StringContent(payloadString));
+            result = Task.Run(async () =>
+            {
+                var result = await client!.PostAsync(Endpoint, new StringContent(payloadString, System.Text.Encoding.UTF8, "application/json"));
                 if (!result.IsSuccessStatusCode) throw new Exception($"The server responded with an error status code ('{result.StatusCode}: {result.ReasonPhrase}')");
 
                 string content = await result.Content.ReadAsStringAsync();
@@ -57,6 +96,19 @@ namespace DynamicRPC
             });
 
             return true;
+        }
+
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object?[]? args, out object? result)
+        {
+            if (parent == null)
+            {
+                return Invoke(binder.Name, args ?? Array.Empty<object>(), out result);
+
+            }
+            else
+            {
+                return parent.Invoke($"{className}.{binder.Name}", args ?? Array.Empty<object>(), out result);
+            }
         }
     }
 }

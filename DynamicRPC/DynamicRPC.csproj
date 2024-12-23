@@ -1,13 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+      <TargetFramework>net6.0</TargetFramework>
+      <ImplicitUsings>enable</ImplicitUsings>
+      <Nullable>enable</Nullable>
+	  <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression> 
+	<Title>DynamicRPC</Title>
+	<Version>0.2.0</Version>
+	<Authors>eligamii</Authors>
+	<Description>An easy-to-use dynamic client to use JSON RPC APIs</Description>
+	<PackageIcon>PackageIcon.png</PackageIcon>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<RepositoryUrl>https://github.com/eligamii/DynamicRPC</RepositoryUrl>
+	<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance> 
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Assets\PackageIcon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\PackageIcon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
